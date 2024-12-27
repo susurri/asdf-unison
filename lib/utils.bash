@@ -40,12 +40,29 @@ platform() {
 	esac
 }
 
+arch() {
+	local arch_check=${ASDF_UNISON_OVERWRITE_ARCH:-"$(uname -m)"}
+	case "${arch_check}" in
+	x86_64 | amd64) echo "x64" ;;
+	aarch64 | arm64) echo "arm64" ;;
+	*) fail "Arch '${arch_check}' not supported!" ;;
+	esac
+}
+
 download_release() {
-	local version filename url
+	local version filename url major minor patch
 	version="$1"
 	filename="$2"
 
-	url="$GH_REPO/releases/download/release/${version}/ucm-$(platform).tar.gz"
+	major=$(echo "$version" | cut -d. -f1)
+	minor=$(echo "$version" | cut -d. -f2)
+	patch=$(echo "$version" | cut -d. -f3)
+
+	if [ $(echo "$version" | head -c 1) = "M" ] || [ $major -eq 0 -a $minor -le 5 -a $patch -le 27 ]; then
+		url="$GH_REPO/releases/download/release/${version}/ucm-$(platform).tar.gz"
+	else
+		url="$GH_REPO/releases/download/release/${version}/ucm-$(platform)-$(arch).tar.gz"
+	fi
 
 	echo "* Downloading $TOOL_NAME release $version..."
 	curl "${curl_opts[@]}" -o "$filename" -C - "$url" || fail "Could not download $url"
